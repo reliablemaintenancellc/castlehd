@@ -9,6 +9,11 @@ jobs:
   build:
     name: Build AAB
     runs-on: ubuntu-latest
+    
+    # 👇 THIS IS THE FIX. We tell it to enter your folder name.
+    defaults:
+      run:
+        working-directory: ./complex_movie_matrix
 
     steps:
       - uses: actions/checkout@v4
@@ -22,7 +27,7 @@ jobs:
         with:
           channel: 'stable'
 
-      # Decode your Key
+      # Now it will find 'android/app' inside 'complex_movie_matrix'
       - name: Decode Keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
@@ -30,7 +35,6 @@ jobs:
       - name: Get Dependencies
         run: flutter pub get
 
-      # CHANGE 1: Build App Bundle instead of APK
       - name: Build App Bundle
         env:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
@@ -38,9 +42,9 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: flutter build appbundle --release
 
-      # CHANGE 2: Upload the .aab file
+      # We upload the file from the correct path
       - name: Upload Release Bundle
         uses: actions/upload-artifact@v4
         with:
           name: castlehd-bundle
-          path: build/app/outputs/bundle/release/app-release.aab
+          path: complex_movie_matrix/build/app/outputs/bundle/release/app-release.aab
