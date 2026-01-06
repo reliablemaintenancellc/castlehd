@@ -1,50 +1,16 @@
-name: Build & Release
-
-on:
-  push:
-    branches: [ "main" ]
-  workflow_dispatch:
+name: Find My Code
+on: [push, workflow_dispatch]
 
 jobs:
-  build:
-    name: Build AAB
+  debug:
     runs-on: ubuntu-latest
-    
-    # 👇 THIS IS THE FIX. We tell it to enter your folder name.
-    defaults:
-      run:
-        working-directory: ./complex_movie_matrix
-
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-
-      # Now it will find 'android/app' inside 'complex_movie_matrix'
-      - name: Decode Keystore
+      
+      - name: 🕵️ List All Files
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
-
-      - name: Get Dependencies
-        run: flutter pub get
-
-      - name: Build App Bundle
-        env:
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          ALIAS_PASSWORD: ${{ secrets.ALIAS_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-        run: flutter build appbundle --release
-
-      # We upload the file from the correct path
-      - name: Upload Release Bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: castlehd-bundle
-          path: complex_movie_matrix/build/app/outputs/bundle/release/app-release.aab
+          echo "=========================================="
+          echo "      HERE IS THE ACTUAL FILE STRUCTURE   "
+          echo "=========================================="
+          find . -maxdepth 2 -not -path '*/.*'
+          echo "=========================================="
