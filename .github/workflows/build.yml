@@ -10,11 +10,24 @@ jobs:
     name: Build AAB
     runs-on: ubuntu-latest
 
-    # ❌ I REMOVED the "defaults" section.
-    # We assume the code is right at the top.
-
     steps:
       - uses: actions/checkout@v4
+
+      # 👇 STEP 1: THE SMART SEARCH
+      # This finds where your code is hiding and saves the location
+      - name: 🕵️ Find Project Root
+        id: find_root
+        run: |
+          # Find the pubspec.yaml file (ignoring hidden . folders)
+          ROOT_PATH=$(find . -name pubspec.yaml -not -path "*/.*" -exec dirname {} \; | head -n 1)
+          
+          if [ -z "$ROOT_PATH" ]; then
+            echo "❌ ERROR: Could not find pubspec.yaml! Did you push your code?"
+            exit 1
+          fi
+
+          echo "✅ FOUND PROJECT IN: $ROOT_PATH"
+          echo "root_path=$ROOT_PATH" >> $GITHUB_OUTPUT
 
       - uses: actions/setup-java@v4
         with:
@@ -25,15 +38,25 @@ jobs:
         with:
           channel: 'stable'
 
-      # Standard decoding (No sub-folder path)
+      # 👇 STEP 2: USE THE FOUND LOCATION
       - name: Decode Keystore
+        working-directory: ${{ steps.find_root.outputs.root_path }}
         run: |
+          # Verify android folder exists first
+          if [ ! -d "android" ]; then
+            echo "❌ ERROR: I found pubspec.yaml, but I CANNOT find the 'android' folder."
+            echo "👉 Check your .gitignore file! You might have blocked the android folder from being uploaded."
+            ls -R
+            exit 1
+          fi
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
 
       - name: Get Dependencies
+        working-directory: ${{ steps.find_root.outputs.root_path }}
         run: flutter pub get
 
       - name: Build App Bundle
+        working-directory: ${{ steps.find_root.outputs.root_path }}
         env:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           ALIAS_PASSWORD: ${{ secrets.ALIAS_PASSWORD }}
@@ -44,4 +67,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: castlehd-bundle
-          path: build/app/outputs/bundle/release/app-release.aab
+          # We use the found path to upload the correct file
+          path: ${{ steps.find_root.outputs.root_path }}/build/app/outputs/bundle/release/app-release.aab
